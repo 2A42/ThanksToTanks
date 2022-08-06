@@ -1,0 +1,372 @@
+#include <iostream> 
+#include <SFML/Graphics.hpp>
+#include "camera.h"
+#include <sstream>
+#include "iostream"
+#include "level.h"
+#include <vector>
+#include <list>
+#include "TinyXML/tinyxml.h"
+
+#define PI 3.141592
+#define RADS PI / 180
+#define GRADS 180 / PI
+
+using namespace sf;
+
+enum Direction
+{
+	DOWN,
+	UP
+};
+
+//enum Rotation
+//{
+//	LEFT,
+//	RIGHT
+//};
+
+//CircleShape PointR(5);
+//CircleShape PointL(5);
+
+class Entity {
+protected:
+	std::vector<Object> obj;//вектор объектов карты
+	int direction = 0, rotation = 0;
+	float dx, dy, x, y, x0, y0, w, h, health, speed = 0, angle = -PI / 2;
+	//float collisionPoint_X1, collisionPoint_Y1, collisionPoint_X2, collisionPoint_Y2;
+	float /*whAngle_x1, whAngle_y1, */collisionPointX, collisionPointY /*whAngle_x3, whAngle_y3*/;
+	bool life, collision = false;
+	Texture texture;
+	String name;	//враги могут быть разные, мы не будем делать другой класс для врага.всего лишь различим врагов по имени и дадим каждому свое действие в update в зависимости от имени
+	
+	FloatRect getRect() {
+		return FloatRect(x + collisionPointX, y + collisionPointY, 1, 1);
+	}
+
+public:
+	Sprite sprite;
+	std::vector<FloatRect> FrontArmor;
+	std::vector<FloatRect> SideArmor;
+	std::vector<FloatRect> RearArmor;
+	std::vector<FloatRect> Armor;
+	Entity(Image& image, float X, float Y, int W, int H, String Name) {
+		x = X; y = Y; w = W; h = H; name = Name;
+		speed = 0; health = 100; dx = 0; dy = 0;
+		texture.loadFromImage(image);
+		sprite.setTexture(texture);
+		sprite.setOrigin(w / 2, h / 2);
+		life = true;
+	}
+
+	virtual void update(float time) = 0;
+	virtual void checkCollision() = 0;
+
+	void setCollision(bool collision) {
+		this->collision = collision;
+	}
+};
+
+class Player : public Entity {
+public:
+	Player(Image& image, Level& lev, float X, float Y, int W, int H, String Name) :Entity(image, X, Y, W, H, Name) {
+		obj = lev.GetAllObjects();
+		if (name == "Player1") {
+			sprite.setTextureRect(IntRect(0, 0, w, h));
+		}
+	}
+
+	void Control() {
+		if ((Keyboard::isKeyPressed(Keyboard::Left) || (Keyboard::isKeyPressed(Keyboard::A)))) {
+			if (collision == false || ((Keyboard::isKeyPressed(Keyboard::S) || (Keyboard::isKeyPressed(Keyboard::W))))) {
+				sprite.setRotation(sprite.getRotation() - 0.5);
+				angle = angle - 0.5 * RADS;
+			}
+			//rotation = LEFT;
+		}
+		if ((Keyboard::isKeyPressed(Keyboard::Right) || (Keyboard::isKeyPressed(Keyboard::D)))) {
+			if (collision == false || ((Keyboard::isKeyPressed(Keyboard::S) || (Keyboard::isKeyPressed(Keyboard::W))))) {
+				sprite.setRotation(sprite.getRotation() + 0.5);
+				angle = angle + 0.5 * RADS;
+			}
+			//rotation = RIGHT;
+		}
+		if ((Keyboard::isKeyPressed(Keyboard::Up) || (Keyboard::isKeyPressed(Keyboard::W)))) {
+			direction = UP;
+			speed = 0.2;
+		}
+		if ((Keyboard::isKeyPressed(Keyboard::Down) || (Keyboard::isKeyPressed(Keyboard::S)))) {
+			direction = DOWN;
+			speed = 0.2;
+		}
+	}
+
+	void buildCollision() {
+		/*if (TileMap[int((y - collisionPoint_Y2) / 32)][int((x - collisionPoint_X2) / 32)] == '0' ||
+			TileMap[int((y + collisionPoint_Y1) / 32)][int((x + collisionPoint_X1) / 32)] == '0' ||
+			TileMap[int((y - collisionPoint_Y2) / 32)][int((x - collisionPoint_X2) / 32)] == 's' ||
+			TileMap[int((y + collisionPoint_Y1) / 32)][int((x + collisionPoint_X1) / 32)] == 's' ||
+			TileMap[int((y + collisionPoint_Y1 / 2 - collisionPoint_Y2 / 2) / 32)][int((x + collisionPoint_X1 / 2 - collisionPoint_X2 / 2) / 32)] == '0' ||
+			TileMap[int((y + collisionPoint_Y1 / 2 - collisionPoint_Y2 / 2) / 32)][int((x + collisionPoint_X1 / 2 - collisionPoint_X2 / 2) / 32)] == 's')
+		{
+			x = x0;
+			y = y0;
+			collision = true;
+		}*/
+
+		FrontArmor.clear();
+		SideArmor.clear();
+		RearArmor.clear();
+		Armor.clear();
+
+		//проходимся по объектам
+		for (int j = 0; j < h; j += 25) {
+			collisionPointX = ((w - j) / 2 * sin(angle) + h / 2 * cos(angle)); collisionPointY = (-(w - j) / 2 * cos(angle) + h / 2 * sin(angle));
+			FrontArmor.push_back(getRect()); Armor.push_back(getRect());
+				
+			collisionPointX = ((w - j) / 2 * sin(angle) - h / 2 * cos(angle));  collisionPointY = (-(w - j) / 2 * cos(angle) - h / 2 * sin(angle));
+			RearArmor.push_back(getRect()); Armor.push_back(getRect());
+
+			collisionPointX = (w / 2 * sin(angle) + (h - 2*j) / 2 * cos(angle));  collisionPointY = (-w / 2 * cos(angle) + (h - 2*j) / 2 * sin(angle));
+			SideArmor.push_back(getRect()); Armor.push_back(getRect());
+			collisionPointX = (-w / 2 * sin(angle) + (h - 2*j) / 2 * cos(angle));	collisionPointY = (w / 2 * cos(angle) + (h - 2*j) / 2 * sin(angle));
+			SideArmor.push_back(getRect()); Armor.push_back(getRect());
+		}
+
+		for (int i = 0; i < obj.size(); i++) {//проходимся по объектам
+			for (auto j = Armor.begin(); j != Armor.end(); j++)
+				if (j->intersects(obj[i].rect)) { collision = true; break; }
+		}
+			//for (int j = 0; j < h; j+=1) {
+			//	collisionPointX = ((w - j) / 2 * sin(angle) + h / 2 * cos(angle)); collisionPointY = (-(w - j) / 2 * cos(angle) + h / 2 * sin(angle));
+			//	//collisionPoints.push_back(getRect());
+			//	if (getRect().intersects(obj[i].rect)) { collision = true; break; } 
+			//	collisionPointX = ((w - j) / 2 * sin(angle) - h / 2 * cos(angle));  collisionPointY = (-(w - j) / 2 * cos(angle) - h / 2 * sin(angle));
+			//	//collisionPoints.push_back(getRect());
+			//	if (getRect().intersects(obj[i].rect)) { collision = true; break; }
+			//}
+			//for (int k = 0; k < 2*h; k+=20) {
+			//	collisionPointX = (w / 2 * sin(angle) + (h - k) / 2 * cos(angle));  collisionPointY = (-w / 2 * cos(angle) + (h - k) / 2 * sin(angle));
+			//	//collisionPoints.push_back(getRect());
+			//	if (getRect().intersects(obj[i].rect)) { collision = true; break; }
+			//	collisionPointX = (-w / 2 * sin(angle) + (h - k) / 2 * cos(angle));	collisionPointY = (w / 2 * cos(angle) + (h - k) / 2 * sin(angle));
+			//	//collisionPoints.push_back(getRect());
+			//	if (getRect().intersects(obj[i].rect)) { collision = true; break; }
+			//}
+	}
+
+	void checkCollision() {
+		
+			if (collision)//проверяем пересечение игрока с объектом
+			{
+				//if (obj[i].name == "wall")//если встретили препятствие
+				//{
+				//	x = x0;
+				//	y = y0;
+				//	collision = true;
+				//}
+				x = x0;
+				y = y0;
+				//collision = false;
+			}
+		
+	}
+
+	void update(float time) //функция "оживления" объекта класса. update - обновление. принимает в себя время SFML , вследствие чего работает бесконечно, давая персонажу движение.
+	{
+		////////////////////////////////////Some stupid math(!badcode!)
+		/*whAngle_x1 = (w / 2 * sin(angle) - h / 2 * cos(angle));		whAngle_y1 = (-w / 2 * cos(angle) - h / 2 * sin(angle));
+		whAngle_x2 = (w / 2 * sin(angle) + h/2 * cos(angle));		whAngle_y2 = (-w / 2 * cos(angle) + h /2 * sin(angle));
+		whAngle_x3 = (-w / 2 * sin(angle) + (h - 250) / 2 * cos(angle));	whAngle_y3 = (w / 2 * cos(angle) + (h - 250) / 2 * sin(angle));*/
+		////////////////////////////////////-_-
+		switch (direction)	//если едем и вертимся
+		{
+			case Direction::DOWN: dy = -speed * sin(angle); dx = -speed * cos(angle); break;
+																					
+			case Direction::UP:	  dy = speed * sin(angle); dx = speed * cos(angle);	  break;
+		}
+		x0 = x;
+		y0 = y;
+		collision = false;
+		x += dx * time;//то движение из прошлого урока. наше ускорение на время получаем смещение координат и как следствие движение
+		y += dy * time;//аналогично по игреку
+		speed = 0;//зануляем скорость, чтобы персонаж остановился.
+		sprite.setPosition(x, y); //выводим спрайт в позицию x y , посередине. бесконечно выводим в этой функции, иначе бы наш спрайт стоял на месте.
+		sprite.setOrigin(w / 2, h / 2);
+		//PointL.setPosition(x, y);
+		/*
+		w = w0 * abs(sin(angle)) + h0 * abs(cos(angle));
+		h = w0 * abs(cos(angle)) + h0 * abs(sin(angle));*/
+		buildCollision();
+		checkCollision();
+	}
+};
+
+class Enemy :public Entity {
+public:
+	Enemy(Image& image, Level& lev, float X, float Y, int W, int H, String Name) :Entity(image, X, Y, W, H, Name) {
+		obj = lev.GetAllObjects();
+		//GetObjects("walls");
+		if (name == "Sherman") {
+			sprite.setTextureRect(IntRect(0, 0, w, h));
+			//dy = 0.1;
+			speed = 0.15;//даем скорость.этот объект всегда двигается
+		}
+	}
+
+	void buildCollision() {
+		/*if (TileMap[int((y - collisionPoint_Y2) / 32)][int((x - collisionPoint_X2) / 32)] == '0' ||
+			TileMap[int((y + collisionPoint_Y1) / 32)][int((x + collisionPoint_X1) / 32)] == '0' ||
+			TileMap[int((y - collisionPoint_Y2) / 32)][int((x - collisionPoint_X2) / 32)] == 's' ||
+			TileMap[int((y + collisionPoint_Y1) / 32)][int((x + collisionPoint_X1) / 32)] == 's' ||
+			TileMap[int((y + collisionPoint_Y1 / 2 - collisionPoint_Y2 / 2) / 32)][int((x + collisionPoint_X1 / 2 - collisionPoint_X2 / 2) / 32)] == '0' ||
+			TileMap[int((y + collisionPoint_Y1 / 2 - collisionPoint_Y2 / 2) / 32)][int((x + collisionPoint_X1 / 2 - collisionPoint_X2 / 2) / 32)] == 's')
+		{
+			x = x0;
+			y = y0;
+			collision = true;
+		}*/
+		FrontArmor.clear();
+		SideArmor.clear();
+		RearArmor.clear();
+		Armor.clear();
+
+		//проходимся по объектам
+		for (int j = 0; j < h; j += 25) {
+			collisionPointX = ((w - j) / 2 * sin(angle) + h / 2 * cos(angle)); collisionPointY = (-(w - j) / 2 * cos(angle) + h / 2 * sin(angle));
+			FrontArmor.push_back(getRect()); Armor.push_back(getRect());
+
+			collisionPointX = ((w - j) / 2 * sin(angle) - h / 2 * cos(angle));  collisionPointY = (-(w - j) / 2 * cos(angle) - h / 2 * sin(angle));
+			RearArmor.push_back(getRect()); Armor.push_back(getRect());
+
+			collisionPointX = (w / 2 * sin(angle) + (h - 2 * j) / 2 * cos(angle));  collisionPointY = (-w / 2 * cos(angle) + (h - 2 * j) / 2 * sin(angle));
+			SideArmor.push_back(getRect()); Armor.push_back(getRect());
+			collisionPointX = (-w / 2 * sin(angle) + (h - 2 * j) / 2 * cos(angle));	collisionPointY = (w / 2 * cos(angle) + (h - 2 * j) / 2 * sin(angle));
+			SideArmor.push_back(getRect()); Armor.push_back(getRect());
+		}
+
+		for (int i = 0; i < obj.size(); i++) {//проходимся по объектам
+			for (auto j = Armor.begin(); j != Armor.end(); j++)
+				if (obj[i].name != "Enemy" && j->intersects(obj[i].rect)) { collision = true; break; }
+		}
+	}
+
+	void checkCollision() {
+
+		if (collision)//проверяем пересечение игрока с объектом
+		{
+			//if (obj[i].name == "wall")//если встретили препятствие
+			//{
+			//	x = x0;
+			//	y = y0;
+			//	collision = true;
+			//}
+			//x = x0;
+			//y = y0;
+			speed = -speed;
+			collision = false;
+		}
+
+	}
+
+	void update(float time)
+	{
+		if (name == "Sherman") {//для персонажа с таким именем логика будет такой
+		
+		//////moveTimer += time;if (moveTimer>3000){ dx *= -1; moveTimer = 0; }//меняет направление примерно каждые 3 сек
+		////	y0 = y;
+		////	x0 = x;
+
+			angle = angle - 0.7 * RADS;
+			dx = speed * cos(angle); dy = speed * sin(angle);
+			x += dx * time; y += dy * time;
+			sprite.setOrigin(w / 2, h / 2);
+			sprite.setRotation(sprite.getRotation() - 0.7);
+			sprite.setPosition(x/* + w/2*/, y/* + h/2*/); //задаем позицию спрайта в место его центра
+			buildCollision();
+			checkCollision();
+
+			if (health <= 0) { life = false; }
+		}
+	}
+};
+
+int main()
+{
+	Clock clock;
+	Image Gun_image;
+	Image Body_image;
+	Image Enemy_image;
+	Level lvl;//создали экземпляр класса уровень
+	std::list<Entity*>  entities;//создаю список, сюда буду кидать объекты.например врагов.
+	std::list<Entity*>::iterator it;//итератор чтобы проходить по эл-там списка
+	lvl.LoadFromFile("twolane_blacktop.tmx");//загрузили в него карту, внутри класса с помощью методов он ее обработает.
+	
+	Object player = lvl.GetObject("Player");
+	std::vector<Object> enemies = lvl.GetObjects("Enemy");//все объекты врага на tmx карте хранятся в этом векторе
+	//Object enemy = lvl.GetObject("Enemy");
+	Enemy_image.loadFromFile("Images/Sherman.png");
+	Gun_image.loadFromFile("Images/tiger2_gun.png");
+	Body_image.loadFromFile("Images/tiger2_body.png");
+
+	RenderWindow window(VideoMode(1600, 900), "Game");
+	Player Body(Body_image, lvl, player.rect.left, player.rect.top, 65, 125, "Player1");//создаем объект actor класса player,задаем "hero.png" как имя файла+расширение, далее координата Х,У, ширина, высота.
+	Player Gun(Gun_image, lvl, player.rect.left, player.rect.top, 45, 215, "Player1");
+	for (int i = 0; i < enemies.size(); i++)//проходимся по элементам этого вектора(а именно по врагам)
+		entities.push_back(new Enemy(Enemy_image, lvl, enemies[i].rect.left, enemies[i].rect.top, 50, 140, "Sherman"));//и закидываем в список всех наших врагов с карты
+	camera.reset(FloatRect(0, 0, 1600, 900));//размер "вида" камеры при создании объекта вида камеры. (потом можем менять как хотим) Что то типа инициализации.
+		
+	while (window.isOpen())
+	{
+		float time = clock.getElapsedTime().asMicroseconds();
+		clock.restart();
+		time = time / 800;
+		Event event;
+		while (window.pollEvent(event))
+		{
+			if (event.type == Event::Closed)
+				window.close();
+		}
+
+		///////////////////////////////////////////Управление персонажем////////////////////////////////////////////////////////////////////////
+		Vector2i MousePixelPos = Mouse::getPosition(window);//забираем коорд курсора
+		Vector2f MousePos = window.mapPixelToCoords(MousePixelPos);//переводим их в игровые (уходим от коорд окна)
+		float dX = MousePos.x - Body.sprite.getPosition().x;//вектор , колинеарный прямой, которая пересекает спрайт и курсор
+		float dY = MousePos.y - Body.sprite.getPosition().y;//он же, координата y
+		float rotation = (atan2(dY, dX)) * GRADS;//получаем угол в радианах и переводим его в градусы
+		Gun.sprite.setOrigin(Gun.sprite.getTextureRect().width / 2, Gun.sprite.getTextureRect().height / 2);
+		Gun.sprite.setRotation(rotation + 90);
+		//поворачиваем спрайт на эти градусы
+		//for (it = entities.begin(); it != entities.end(); it++) {//проходимся по эл-там списка
+		//	//std::cout << "\n" << (*it)->collisionPointsFront.size();
+		//	for (auto e = (*it)->Armor.begin(); e != (*it)->Armor.end(); e++)
+		//		for (auto p = Body.Armor.begin(); p != Body.Armor.end(); p++)
+		//			if (e->intersects(*p) ||
+		//				p->intersects(*e) ) {
+		//				std::cout << "suka";
+		//				Body.setCollision(true);
+		//				(*it)->setCollision(true);
+		//				Body.checkCollision();
+		//				(*it)->checkCollision();
+		//			}
+		//	///(*it)->update(time);
+		//}
+		Body.Control();	//клавиатура
+		Body.update(time);		//оживляем объект p класса Player с помощью времени sfml, передавая время в качестве параметра функции update. благодаря этому персонаж может двигаться
+		Gun.sprite.setPosition(Body.sprite.getPosition().x, Body.sprite.getPosition().y);
+		
+		for (it = entities.begin(); it != entities.end(); it++) { (*it)->update(time); }//для всех элементов списка(пока это только враги,но могут быть и пули к примеру) активируем ф-цию update
+
+		setPlayerCoordinateForCamera(Body.sprite.getPosition().x, Body.sprite.getPosition().y);
+		window.setView(camera);	//оживляем камеру в окне sfml
+		window.clear(Color(128, 106, 89));
+
+		lvl.Draw(window);
+		for (it = entities.begin(); it != entities.end(); it++) window.draw((*it)->sprite); //рисуем entities объекты (сейчас это только враги)
+		window.draw(Body.sprite);
+		window.draw(Gun.sprite);
+		//window.draw(PointL);
+		window.display();
+	}
+	return 0;
+}
