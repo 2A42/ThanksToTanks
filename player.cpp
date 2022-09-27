@@ -19,16 +19,19 @@ Player::Player(Vehicle& vehicle, Image& image, int W, int H, Image& GunImage, in
 
 void Player::Control(SoundClass& sound)
 {
+	int reverse = 1;
 	angle0 = angle;
 	spriteAngle0 = sprite.getRotation();
 	if ((Keyboard::isKeyPressed(Keyboard::Left) || (Keyboard::isKeyPressed(Keyboard::A)))) {
-		sprite.setRotation(sprite.getRotation() - playerVehicle.getRotationSpeed());
-		angle = angle - playerVehicle.getRotationSpeed() * RADS;
+		if ((Keyboard::isKeyPressed(Keyboard::Down) || (Keyboard::isKeyPressed(Keyboard::S)))) reverse = -1;
+		sprite.setRotation(sprite.getRotation() - reverse * playerVehicle.getRotationSpeed());
+		angle = angle - reverse * playerVehicle.getRotationSpeed() * RADS;
 		sound.player_moving();
 	}
 	if ((Keyboard::isKeyPressed(Keyboard::Right) || (Keyboard::isKeyPressed(Keyboard::D)))) {
-		sprite.setRotation(sprite.getRotation() + playerVehicle.getRotationSpeed());
-		angle = angle + playerVehicle.getRotationSpeed() * RADS;
+		if ((Keyboard::isKeyPressed(Keyboard::Down) || (Keyboard::isKeyPressed(Keyboard::S)))) reverse = -1;
+		sprite.setRotation(sprite.getRotation() + reverse * playerVehicle.getRotationSpeed());
+		angle = angle + reverse * playerVehicle.getRotationSpeed() * RADS;
 		sound.player_moving();
 	}
 	if ((Keyboard::isKeyPressed(Keyboard::Up) || (Keyboard::isKeyPressed(Keyboard::W)))) {
