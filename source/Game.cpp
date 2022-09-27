@@ -20,24 +20,17 @@
 
 using namespace sf;
 
-//////////////////////////////////////////WARNING! BAD CODE HERE///////////////////////////////////////////////////
-void CollisionBetweenEntitiesAndPlayer(Player& PLAYER, std::list<Entity*>& entities, SoundClass& sound) {
+void PlayerCollisionDetection(Player& PLAYER, std::list<Entity*>& entities, SoundClass& sound) {
 	std::list<Entity*>::iterator it;
-	std::list<Entity*>::iterator it2;
 	for (it = entities.begin(); it != entities.end(); it++) {
 		auto i = (*it)->getVertex().begin();
 		auto j = PLAYER.getVertex().begin();
 		////////////////////////////////////////Collision between player & enemy/////////////////////////////////////////////////////
 		for (; i != (*it)->getVertex().end(); i++)
 			for (; j != PLAYER.getVertex().end(); j++)
-				if ((*it)->getName() != "repair" && (((i + 1) != (*it)->getVertex().end() && math::isPointAtLine(*i, *(i + 1), *j)) ||
+				if ((*it)->getName() != "shell" && (*it)->getName() != "repair" && (((i + 1) != (*it)->getVertex().end() && math::isPointAtLine(*i, *(i + 1), *j)) ||
 					math::isPointAtLine((*it)->getVertex().back(), (*it)->getVertex().front(), *j))) {
-					if ((*it)->getName() == "shell") {	//if entity is enemy shell
-						if ((*it)->team == 1) {
-							(*it)->collision = true; (*it)->CollisionWithEntity();
-						}
-					}
-					else if ((*it)->getName() == "xp") {
+					if ((*it)->getName() == "xp") {
 						(*it)->collision = true; (*it)->CollisionWithEntity();
 						PLAYER.playerXP += (*it)->getXPcost();
 						sound.xp_pickup();
@@ -51,19 +44,11 @@ void CollisionBetweenEntitiesAndPlayer(Player& PLAYER, std::list<Entity*>& entit
 
 		for (i = PLAYER.getVertex().begin(); i != PLAYER.getVertex().end(); i++)
 			for (j = (*it)->getVertex().begin(); j != (*it)->getVertex().end(); j++)
-				if ((*it)->getName() != "xp" && (((i + 1) != PLAYER.getVertex().end() && math::isPointAtLine(*i, *(i + 1), *j)) ||
+				if ((*it)->getName() != "shell" && (*it)->getName() != "xp" && (((i + 1) != PLAYER.getVertex().end() && math::isPointAtLine(*i, *(i + 1), *j)) ||
 					math::isPointAtLine(PLAYER.getVertex().front(), PLAYER.getVertex().back(), *j) ||
 					(abs((*it)->getSprite().getPosition().x - PLAYER.getSprite().getPosition().x) <= 10) &&
 					(abs((*it)->getSprite().getPosition().y - PLAYER.getSprite().getPosition().y) <= 10))) {
-					if ((*it)->getName() == "shell") {
-						if ((*it)->team == 1) {
-							(*it)->collision = true; (*it)->CollisionWithEntity();
-							if(math::isPointAtLine(PLAYER.getVertex().front(), PLAYER.getVertex().back(), *j)) PLAYER.CollisionWithArmor(PLAYER.getVertex().front(), PLAYER.getVertex().back(), (*it)->getDamage(), sound);
-							else if (abs((*it)->getSprite().getPosition().x - PLAYER.getSprite().getPosition().x) <= 10) PLAYER.CollisionWithArmor(PLAYER.getVertex()[1], PLAYER.getVertex()[2], (*it)->getDamage(), sound);
-							else PLAYER.CollisionWithArmor(*i, *(i + 1), (*it)->getDamage(), sound);
-						}
-					}
-					else if ((*it)->getName() == "repair") {
+					if ((*it)->getName() == "repair") {
 						if (PLAYER.getCurrentHealth() - (*it)->getDamage() <= PLAYER.getMaxHealth()) {
 							(*it)->collision = true; (*it)->CollisionWithEntity();
 							PLAYER.CollisionWithArmor(*i, *(i + 1), (*it)->getDamage(), sound);
@@ -75,27 +60,51 @@ void CollisionBetweenEntitiesAndPlayer(Player& PLAYER, std::list<Entity*>& entit
 					}
 					return;
 				}
+	}
+}
+
+void PlayerDamageDetection(Player& PLAYER, std::list<Entity*>& entities, SoundClass& sound) {
+	std::list<Entity*>::iterator it;
+	for (it = entities.begin(); it != entities.end(); it++) {
+		auto i = (*it)->getVertex().begin();
+		auto j = PLAYER.getVertex().begin();
+
+		for (i = PLAYER.getVertex().begin(); i != PLAYER.getVertex().end(); i++)
+			for (j = (*it)->getVertex().begin(); j != (*it)->getVertex().end(); j++)
+				if ((*it)->getName() != "xp" && (((i + 1) != PLAYER.getVertex().end() && math::isPointAtLine(*i, *(i + 1), *j)) ||
+					math::isPointAtLine(PLAYER.getVertex().front(), PLAYER.getVertex().back(), *j) ||
+					(abs((*it)->getSprite().getPosition().x - PLAYER.getSprite().getPosition().x) <= 10) &&
+					(abs((*it)->getSprite().getPosition().y - PLAYER.getSprite().getPosition().y) <= 10))) {
+					if ((*it)->getName() == "shell") {
+						if ((*it)->team == 1) {
+							(*it)->collision = true; (*it)->CollisionWithEntity();
+							if (math::isPointAtLine(PLAYER.getVertex().front(), PLAYER.getVertex().back(), *j)) PLAYER.CollisionWithArmor(PLAYER.getVertex().front(), PLAYER.getVertex().back(), (*it)->getDamage(), sound);
+							else if (abs((*it)->getSprite().getPosition().x - PLAYER.getSprite().getPosition().x) <= 10) PLAYER.CollisionWithArmor(PLAYER.getVertex()[1], PLAYER.getVertex()[2], (*it)->getDamage(), sound);
+							else PLAYER.CollisionWithArmor(*i, *(i + 1), (*it)->getDamage(), sound);
+							return;
+						}
+					}
+				}
+	}
+}
+
+void EnemiesCollisionDetection(std::list<Entity*>& entities, SoundClass& sound) {
+	std::list<Entity*>::iterator it;
+	std::list<Entity*>::iterator it2;
+	for (it = entities.begin(); it != entities.end(); it++) {
 		//////////////////////////////////////////Collision between enemies/////////////////////////////////////////////////////
 		for (it2 = entities.begin(); it2 != entities.end(); it2++) {
 			if ((*it)->getVertex() != (*it2)->getVertex())	//not the same entity
 			{
-				i = (*it)->getVertex().begin();
-				j = (*it2)->getVertex().begin();
+				auto i = (*it)->getVertex().begin();
+				auto j = (*it2)->getVertex().begin();
 				for (; i != (*it)->getVertex().end(); i++)
 					for (; j != (*it2)->getVertex().end(); j++)
-						if ((*it2)->getName() != "xp" && (*it)->getName() != "xp" && (*it)->getName() != "repair" && (((i + 1) != (*it)->getVertex().end() && math::isPointAtLine(*i, *(i + 1), *j)) ||
+						if ((*it2)->getName() != "shell" && (*it2)->getName() != "xp" && (*it)->getName() != "xp" && (*it)->getName() != "repair" && (((i + 1) != (*it)->getVertex().end() && math::isPointAtLine(*i, *(i + 1), *j)) ||
 							math::isPointAtLine((*it)->getVertex().front(), (*it)->getVertex().back(), *j) ||
 							(abs((*it)->getSprite().getPosition().x - (*it2)->getSprite().getPosition().x) <= 10) &&
 							(abs((*it)->getSprite().getPosition().y - (*it2)->getSprite().getPosition().y) <= 10))) {
-							if ((*it2)->getName() == "shell") {
-								if ((*it2)->team == 0) {
-									if (math::isPointAtLine((*it)->getVertex().front(), (*it)->getVertex().back(), *j)) (*it)->CollisionWithArmor((*it)->getVertex().front(), (*it)->getVertex().back(), (*it2)->getDamage(), sound);
-									else if (abs((*it)->getSprite().getPosition().x - (*it2)->getSprite().getPosition().x) <= 10) (*it)->CollisionWithArmor((*it)->getVertex()[1], (*it)->getVertex()[2], (*it2)->getDamage(), sound);
-									else (*it)->CollisionWithArmor(*i, *(i + 1), (*it2)->getDamage(), sound);
-									(*it2)->collision = true; (*it2)->CollisionWithEntity();
-								}
-							}
-							else if ((*it2)->getName() == "repair") {
+							if ((*it2)->getName() == "repair") {
 								if ((*it)->getCurrentHealth() - (*it2)->getDamage() <= (*it)->getMaxHealth()) {
 									(*it2)->collision = true; (*it2)->CollisionWithEntity();
 									(*it)->CollisionWithArmor(*i, *(i + 1), (*it2)->getDamage(), sound);
@@ -111,7 +120,36 @@ void CollisionBetweenEntitiesAndPlayer(Player& PLAYER, std::list<Entity*>& entit
 		}
 	}
 }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void EnemiesDamageDetection(std::list<Entity*>& entities, SoundClass& sound) {
+	std::list<Entity*>::iterator it;
+	std::list<Entity*>::iterator it2;
+	for (it = entities.begin(); it != entities.end(); it++) {
+		for (it2 = entities.begin(); it2 != entities.end(); it2++) {
+			if ((*it)->getVertex() != (*it2)->getVertex())	//not the same entity
+			{
+				auto i = (*it)->getVertex().begin();
+				auto j = (*it2)->getVertex().begin();
+				for (; i != (*it)->getVertex().end(); i++)
+					for (; j != (*it2)->getVertex().end(); j++)
+						if ((*it2)->getName() != "xp" && (*it)->getName() != "xp" && (*it)->getName() != "repair" && (((i + 1) != (*it)->getVertex().end() && math::isPointAtLine(*i, *(i + 1), *j)) ||
+							math::isPointAtLine((*it)->getVertex().front(), (*it)->getVertex().back(), *j) ||
+							(abs((*it)->getSprite().getPosition().x - (*it2)->getSprite().getPosition().x) <= 10) &&
+							(abs((*it)->getSprite().getPosition().y - (*it2)->getSprite().getPosition().y) <= 10))) {
+							if ((*it2)->getName() == "shell") {
+								if ((*it2)->team == 0) {
+									if (math::isPointAtLine((*it)->getVertex().front(), (*it)->getVertex().back(), *j)) (*it)->CollisionWithArmor((*it)->getVertex().front(), (*it)->getVertex().back(), (*it2)->getDamage(), sound);
+									else if (abs((*it)->getSprite().getPosition().x - (*it2)->getSprite().getPosition().x) <= 10) (*it)->CollisionWithArmor((*it)->getVertex()[1], (*it)->getVertex()[2], (*it2)->getDamage(), sound);
+									else (*it)->CollisionWithArmor(*i, *(i + 1), (*it2)->getDamage(), sound);
+									(*it2)->collision = true; (*it2)->CollisionWithEntity();
+									return;
+								}
+							}
+						}
+			}
+		}
+	}
+}
 
 bool isGameStart() {
 	/////////////////////////////Vehicles initialization/////////////////////////////
@@ -428,7 +466,10 @@ bool isGameStart() {
 
 			sounds.tank_engine_work();
 
-			CollisionBetweenEntitiesAndPlayer(PLAYER, entities, sounds);	//////////////Main collision func
+			//CollisionBetweenEntitiesAndPlayer(PLAYER, entities, sounds);	//////////////Main collision func
+
+			PlayerCollisionDetection(PLAYER, entities, sounds);
+			PlayerDamageDetection(PLAYER, entities, sounds);
 
 			if (PLAYER.getCurrentHealth() <= 0) { PLAYERlifesCount--; PLAYER.life = false; PLAYER.getSprite().setColor(Color::Black); PLAYER.getGunSprite().setColor(Color::Black); effects.push_back(new Effect(ExplosionTank_image, PLAYER.getSprite().getRotation(), PLAYER.getSprite().getPosition().x, PLAYER.getSprite().getPosition().y, 256, 256, 8, 8, "tank_exp")); }
 			if (PLAYERlifesCount < 1) { GUI.drawString("GAME OVER", camera.getCenter(), 35, Color::Black); window.display(); Time t(sf::seconds(1.75)); sleep(t); return GUI.endScreen(gameTime); }
@@ -474,6 +515,8 @@ bool isGameStart() {
 			}
 			else it++;
 		}
+		EnemiesCollisionDetection(entities, sounds);
+		EnemiesDamageDetection(entities, sounds);
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		///////////////////////////////////////////Effects///////////////////////////////////////////////////////////////
