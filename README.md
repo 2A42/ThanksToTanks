@@ -7,7 +7,7 @@ To run project you must install SFML-2.5.1. For Visual Studio(not VS code) users
 
 Thx veresk{ https://vk.com/dvaskin2014 } for help with vehicle sprites. 
 
-Download the game.exe here: https://disk.yandex.ru/d/vYojgCtAjvMLlw
+Download the game.exe here: https://disk.yandex.ru/d/t2DFPUMkYINUOw
 
 ![image](https://user-images.githubusercontent.com/110718745/183285859-3ba740d0-1dda-452f-9b86-0db0772bcb8d.png)
 
